@@ -50,3 +50,14 @@ ros2 run safe_motor_control motor_control
 `Simulation mode`가 보이면 정상입니다. 노드는 `/safe/motor_status`에 `sim:idle:0` 같은 상태를 발행하고, 종료할 때는 Ctrl+C를 누릅니다.
 
 실제 모터와 기구 구동은 이 검증의 범위 밖입니다. 동봉된 하드웨어 설정의 위치값은 현장 보정이 필요한 상태입니다.
+
+## Ubuntu에서 모터 시험 도구 실행
+
+저장소 루트에서 `bash sh/run_safe_motors.sh`를 실행하면 기본값으로 가짜 모터가 시작됩니다. 카메라 인증 프로그램 없이 2번 칸만 시험하려면, 별도 터미널에서 같은 `ROS_DOMAIN_ID`와 `ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST`를 설정하고 다음을 실행합니다.
+
+```bash
+source /opt/ros/jazzy/setup.bash
+python3 -B py/open_slot2_for_test.py --sim
+```
+
+`OPEN`을 입력하면 2번 칸의 시험 요청을 보냅니다. 이 도구를 쓸 때는 카메라 인증 발행자를 종료합니다. 하드웨어 조회에는 DYNAMIXEL SDK가 있는 Python을 `SAFE_MOTOR_PYTHON`으로 지정할 수 있습니다.
