@@ -1,6 +1,6 @@
 # 얼굴 식별·동작 패턴 2단계 인증 금고
 
-실제 금고는 Linux 한 대에서 외장 카메라 인증과 ROS 2 모터 제어를 함께 실행합니다. Windows와 Linux를 동시에 실행하거나 HTTPS 브리지로 연결할 필요가 없습니다. [Linux 실행 및 GPT 인수인계](LINUX_ROS2_HANDOFF.md)가 최신 구동 기준입니다. 아래 Windows 명령은 기존 개발 환경용입니다.
+실제 금고는 Linux 한 대에서 외장 카메라 인증과 ROS 2 모터 제어를 함께 실행합니다. Windows와 Linux를 동시에 실행하거나 HTTPS 브리지로 연결할 필요가 없습니다. [Linux 실행 및 검증 안내](LINUX_ROS2_GUIDE.md)가 최신 구동 기준입니다. 아래 Windows 명령은 기존 개발 환경용입니다.
 
 ## 확장자별 폴더 구성
 
@@ -50,7 +50,7 @@ cd C:\angchicken
 .\.venv\Scripts\python.exe -m unittest discover -s py -p "test_*.py" -v
 ```
 
-상세 안내는 [금고 사용 설명](SAFE_PATTERN_GUIDE.md)을 참고하세요. 이전 [입문자 문서](BEGINNER_GUIDE.md), [프로젝트 작업 이력](PROJECT_SUMMARY.md), [금고 적용 학습 기록](SAFE_PROJECT_LEARNINGS.md)은 과거 실습 내용도 포함합니다.
+상세 안내는 [금고 사용 설명](SAFE_PATTERN_GUIDE.md)을 참고하세요. 이전 [입문자 문서](archive/BEGINNER_GUIDE.md), [프로젝트 작업 이력](archive/PROJECT_SUMMARY.md), [금고 적용 학습 기록](archive/SAFE_PROJECT_LEARNINGS.md)은 과거 실습 내용도 포함합니다.
 
 ## 설치
 

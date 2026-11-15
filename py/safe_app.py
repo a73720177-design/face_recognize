@@ -190,7 +190,8 @@ def run_safe(args):
             if 'arms' in descriptor: visible.append('팔 자세')
             lines.append('캡처 대상: '+(', '.join(visible) or '인식 대기'))
             if ros_output:
-                lines.append('ROS 2 연결 활성 · C: 문 닫기 요청 (실제 문 상태와 인증 상태는 별개)')
+                lines.append(ros_output.motor_status_line())
+                lines.append('C: 문 닫기 요청')
             if getattr(args,'menu_session',False):
                 lines=[line.replace('Q / Esc: 종료','Q / Esc: 메뉴로 돌아가기') for line in lines]
                 lines.append('M: 메뉴로 돌아가 금고 번호·작업 다시 선택')
@@ -209,8 +210,10 @@ def run_safe(args):
                     if safe: safe.lock()
                     break
                 if not args.video:
-                    if ros_output and key in (ord('c'),ord('C')):
-                        ros_output.request_close()
+                    if ros_output and key in (ord('c'),ord('C')) and ros_output.request_close():
+                        if safe:
+                            safe.lock()
+                        gate.reset()
                     if safe and face_present:
                         if key in (ord('p'),ord('P')) and mode=='enroll':
                             if safe.state!='registering': safe.start_registration(time.monotonic())
