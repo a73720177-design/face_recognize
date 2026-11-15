@@ -181,5 +181,5 @@ class PatternSafe:
             lines.append('촬영 직전에는 자세를 잠시 유지하세요')
         else:
             lines.append(f'저장된 패턴: {len(self.pattern)}단계 | 신규 등록: {self.steps}단계')
-        lines.extend(['P: 현재 단계 촬영 시작  U: 동작 인증 시작  L: 잠그기 / 취소','Q / Esc: 종료  |  실제 금고 장치는 연결되지 않았습니다'])
+        lines.extend(['P: 현재 단계 촬영 시작  U: 동작 인증 시작  L: 잠그기 / 취소','Q / Esc: 종료'])
         return lines
