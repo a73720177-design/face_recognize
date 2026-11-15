@@ -14,10 +14,16 @@ ROOT = Path(__file__).resolve().parent.parent
 
 @lru_cache(maxsize=8)
 def korean_font(size):
-    font_path = Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts" / "malgun.ttf"
-    if not font_path.is_file():
-        raise RuntimeError("한글 글꼴을 찾을 수 없습니다: " + str(font_path))
-    return ImageFont.truetype(str(font_path), size)
+    candidates = [
+        os.environ.get('SAFE_FONT_PATH', ''),
+        str(Path(os.environ.get('WINDIR', 'C:/Windows')) / 'Fonts' / 'malgun.ttf'),
+        '/usr/share/fonts/truetype/nanum/NanumGothic.ttf',
+        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+    ]
+    for candidate in candidates:
+        if candidate and Path(candidate).is_file():
+            return ImageFont.truetype(candidate, size)
+    raise RuntimeError('Install fonts-nanum or set SAFE_FONT_PATH to a Korean font')
 
 def draw_korean_text(frame, entries, size=18):
     """Render (text, position, BGR color) entries with a Korean TrueType font."""
