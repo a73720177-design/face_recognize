@@ -68,3 +68,9 @@ ROS_DOMAIN_ID=96 .venv-linux/bin/python -B ros2_ws/tests/check_camera_to_motor.p
 마지막 출력은 `camera-to-motor OK`입니다. 원판 차단, 인증 신호 소실, 닫힘 실패 후 재시도까지 확인하려면 [모터 단독 테스트](../ros2_ws/README.md)를 실행합니다. 실제 모터 커미셔닝은 이 절차와 별개입니다.
 
 기술적인 토픽 계약과 변경 경위는 [기존 인수인계 기록](LINUX_ROS2_HANDOFF.md)에 보관합니다.
+
+## 한 터미널에서 카메라와 가짜 모터 시험 시작
+
+토픽을 각각 실행하는 대신, 설치·빌드 후 저장소 루트에서 `bash sh/live-camera-session.sh`를 실행할 수 있습니다. 뒤에 `retest`를 붙이면 등록된 2번 칸의 인증 화면으로 바로 들어갑니다. 실행하는 동안 모터는 시뮬레이션으로 동작하고, 이번 시험의 로그 위치를 터미널에 표시합니다. 기존 카메라 및 모터 노드는 종료한 뒤 시작합니다.
+
+[프로젝트 폴더 구성](PROJECT_LAYOUT.md)
