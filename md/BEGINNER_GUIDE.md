@@ -39,7 +39,7 @@
 | 코드 | 컴퓨터에게 무엇을 할지 적어 놓은 명령 | 카메라를 열고 손을 찾으라는 명령 |
 | 프로그램 | 명령들을 모아 실행할 수 있게 만든 것 | 얼굴·손 인식 프로그램 |
 | Python | 코드를 작성하는 언어 | `.py` 파일을 실행하는 언어 |
-| 파일 | 내용을 저장하는 단위 | `recognition.py` |
+| 파일 | 내용을 저장하는 단위 | `py/recognition.py` |
 | 폴더 | 여러 파일을 모아 두는 공간 | `C:\angchicken` |
 | 경로 | 파일이나 폴더가 있는 주소 | `.venv\Scripts\python.exe` |
 | 라이브러리 | 다른 개발자가 만든 기능을 가져다 쓰는 도구 모음 | 카메라를 다루는 OpenCV |
@@ -75,16 +75,16 @@ cd C:\angchicken
 ### 3-3. 인식 프로그램 실행하기
 
 ```powershell
-.\.venv\Scripts\python.exe recognition.py
+.\.venv\Scripts\python.exe py/recognition.py
 ```
 
 명령을 나누어 보면 다음과 같다.
 
 - `.\`: 지금 작업 중인 폴더에서 찾는다.
 - `.venv\Scripts\python.exe`: 이 프로젝트의 가상환경에 있는 Python 실행 프로그램이다.
-- `recognition.py`: 실행할 코드 파일이다.
+- `py/recognition.py`: 실행할 코드 파일이다.
 
-즉, ‘이 프로젝트용 Python으로 recognition.py를 실행해줘’라는 뜻이다. 기존 환경에는 필요한 라이브러리가 설치되어 있다. 모델 파일이 없다면 처음 실행할 때 인터넷으로 다운로드한다.
+즉, ‘이 프로젝트용 Python으로 py/recognition.py를 실행해줘’라는 뜻이다. 기존 환경에는 필요한 라이브러리가 설치되어 있다. 모델 파일이 없다면 처음 실행할 때 인터넷으로 다운로드한다.
 
 ### 3-4. 화면에서 확인하기
 
@@ -107,7 +107,7 @@ cd C:\angchicken
 프로그램을 종료한 후 다음 명령을 실행한다.
 
 ```powershell
-.\.venv\Scripts\python.exe recognition.py --register "홍길동"
+.\.venv\Scripts\python.exe py/recognition.py --register "홍길동"
 ```
 
 `--register`는 ‘등록 모드로 실행하라’는 추가 설정이다. `"홍길동"`은 저장할 이름이며 원하는 이름으로 바꿀 수 있다.
@@ -281,12 +281,12 @@ OpenCV 기본 글꼴만으로는 한글을 제대로 표시하기 어려워 Pill
 
 | 파일·폴더 | 쉬운 역할 설명 |
 | --- | --- |
-| `recognition.py` | 전체 작업을 시작하고 연결하는 실행 파일 |
-| `face_identity.py` | 얼굴 등록·이름 비교·얼굴 비율 계산 담당 |
+| `py/recognition.py` | 전체 작업을 시작하고 연결하는 실행 파일 |
+| `py/face_identity.py` | 얼굴 등록·이름 비교·얼굴 비율 계산 담당 |
 | `hand_motion.py` | 이전 손 위치를 기억하고 이동·흔들기 판단 |
 | `hand_blur.py` | 가릴 손 영역과 유지 시간을 관리 |
-| `requirements.txt` | 설치해야 할 도구와 버전을 적은 목록 |
-| `run.ps1` | 가상환경 Python으로 실행하는 PowerShell 스크립트 |
+| `txt/requirements.txt` | 설치해야 할 도구와 버전을 적은 목록 |
+| `ps1/run.ps1` | 가상환경 Python으로 실행하는 PowerShell 스크립트 |
 | `.venv/` | 이 프로젝트용 Python과 설치 도구가 있는 공간 |
 | `models/` | 얼굴·몸·손을 찾는 학습된 모델 파일 |
 | `data/faces.json` | 등록 이름과 얼굴 특징 숫자 저장 |
@@ -296,7 +296,7 @@ OpenCV 기본 글꼴만으로는 한글을 제대로 표시하기 어려워 Pill
 | `SAFE_PROJECT_LEARNINGS.md` | 금고에 적용할 기술과 배운 점 |
 | `BEGINNER_GUIDE.md` | 지금 읽고 있는 입문자용 설명 |
 
-코드를 여러 파일로 나눈 이유는 역할별로 찾고 수정하기 쉽게 하기 위해서다. 움직임에 문제가 있으면 `hand_motion.py`를, 얼굴 저장에 문제가 있으면 `face_identity.py`를 확인한다.
+코드를 여러 파일로 나눈 이유는 역할별로 찾고 수정하기 쉽게 하기 위해서다. 움직임에 문제가 있으면 `hand_motion.py`를, 얼굴 저장에 문제가 있으면 `py/face_identity.py`를 확인한다.
 
 ### 설치한 도구
 
@@ -307,7 +307,7 @@ OpenCV 기본 글꼴만으로는 한글을 제대로 표시하기 어려워 Pill
 | NumPy | 좌표·거리·각도 같은 숫자 계산 | 2.5.3 |
 | Pillow | 이미지 위에 한글 글자 그리기 | 12.3.0 |
 
-‘버전’은 도구의 판을 구분하는 번호다. `requirements.txt`에 판 번호를 정해 두면 다른 환경에서도 같은 조합으로 설치하기 쉽다.
+‘버전’은 도구의 판을 구분하는 번호다. `txt/requirements.txt`에 판 번호를 정해 두면 다른 환경에서도 같은 조합으로 설치하기 쉽다.
 
 ## 12. 코드를 처음 읽을 때 알아둘 표현
 
@@ -405,7 +405,7 @@ OpenCV를 Python 코드에서 쓰도록 가져오는 명령이다. 라이브러�
 
 | 상황 | 먼저 확인할 내용 |
 | --- | --- |
-| `recognition.py`를 찾을 수 없다고 나옴 | `cd C:\angchicken`을 먼저 실행했는지 확인 |
+| `py/recognition.py`를 찾을 수 없다고 나옴 | `cd C:\angchicken`을 먼저 실행했는지 확인 |
 | Python 실행 파일을 찾을 수 없음 | `.venv` 폴더가 있는지와 입력한 경로 확인 |
 | 카메라가 열리지 않음 | Windows 카메라 권한과 다른 앱의 카메라 사용 확인 |
 | 얼굴 점은 보이는데 이름이 안 나옴 | 얼굴을 등록했는지, 얼굴이 너무 작거나 여러 명인지 확인 |
@@ -419,13 +419,13 @@ OpenCV를 Python 코드에서 쓰도록 가져오는 명령이다. 라이브러�
 다른 카메라를 사용하려면 다음처럼 실행할 수 있다.
 
 ```powershell
-.\.venv\Scripts\python.exe recognition.py --camera 1
+.\.venv\Scripts\python.exe py/recognition.py --camera 1
 ```
 
 카메라 없이 모델 실행만 점검하려면 다음 명령을 사용한다. 이것은 실제 사람의 인식 정확도를 측정하는 명령은 아니다.
 
 ```powershell
-.\.venv\Scripts\python.exe recognition.py --self-test
+.\.venv\Scripts\python.exe py/recognition.py --self-test
 ```
 
 ## 16. 새 컴퓨터에 설치할 경우
@@ -434,8 +434,8 @@ OpenCV를 Python 코드에서 쓰도록 가져오는 명령이다. 라이브러�
 
 ```powershell
 python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe recognition.py --self-test
+.\.venv\Scripts\python.exe -m pip install -r txt/requirements.txt
+.\.venv\Scripts\python.exe py/recognition.py --self-test
 ```
 
 첫 줄은 전용 가상환경을 만들고, 두 번째 줄은 도구 목록을 읽어 설치한다. 세 번째 줄은 모델 실행을 확인한다. `pip`는 Python 라이브러리를 설치하는 도구다. 모델이 없는 환경에서는 인터넷 연결이 필요하다.

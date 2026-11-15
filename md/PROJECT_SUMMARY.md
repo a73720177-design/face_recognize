@@ -92,7 +92,7 @@
 
 ## 3. 설치한 라이브러리와 모델
 
-requirements.txt:
+txt/requirements.txt:
 - mediapipe==1.0.1
 - opencv-contrib-python==5.0.0.93
 - numpy==2.5.3
@@ -111,12 +111,12 @@ models 폴더에 다음 다섯 모델을 사용한다:
 
 ## 4. 파일 구성
 
-- recognition.py: 실행 진입점, 영상 입력, 얼굴·신체·손 추론, 한글 UI, 정적인 손 모양 판별.
-- face_identity.py: YuNet·SFace 모델 관리, 얼굴 등록·식별, 얼굴 비율 분석.
+- py/recognition.py: 실행 진입점, 영상 입력, 얼굴·신체·손 추론, 한글 UI, 정적인 손 모양 판별.
+- py/face_identity.py: YuNet·SFace 모델 관리, 얼굴 등록·식별, 얼굴 비율 분석.
 - hand_motion.py: 손 중심 궤적 추적, 흔들기·이동 방향 판별.
 - hand_blur.py: 중지 동작 손 영역 블러 및 유지 시간 관리.
-- requirements.txt: 직접 사용하는 라이브러리 버전.
-- run.ps1: 가상환경 Python으로 프로그램을 실행하는 PowerShell 스크립트.
+- txt/requirements.txt: 직접 사용하는 라이브러리 버전.
+- ps1/run.ps1: 가상환경 Python으로 프로그램을 실행하는 PowerShell 스크립트.
 - README.md: 사용자 실행 및 기능 설명.
 - PROJECT_SUMMARY.md: 이번 작업 전체 정리.
 - .gitignore: 가상환경, 캐시, 모델, 얼굴 등록 데이터 등을 Git에서 제외.
@@ -129,13 +129,13 @@ models 폴더에 다음 다섯 모델을 사용한다:
 
 ```powershell
 cd C:\angchicken
-.\.venv\Scripts\python.exe recognition.py
+.\.venv\Scripts\python.exe py/recognition.py
 ```
 
 ### 얼굴 등록
 
 ```powershell
-.\.venv\Scripts\python.exe recognition.py --register "홍길동"
+.\.venv\Scripts\python.exe py/recognition.py --register "홍길동"
 ```
 
 한 명만 카메라를 바라보고 얼굴을 충분히 크게 보여준 뒤 S를 누른다. 조명·고개 방향을 조금 바꿔 3~5회 저장한다. 다른 사람은 다른 이름으로 다시 실행한다. 등록 후 일반 실행 명령으로 이름 인식을 확인한다.
@@ -144,19 +144,19 @@ cd C:\angchicken
 
 ```powershell
 # 다른 카메라
-.\.venv\Scripts\python.exe recognition.py --camera 1
+.\.venv\Scripts\python.exe py/recognition.py --camera 1
 # 영상 파일
-.\.venv\Scripts\python.exe recognition.py --video "C:\videos\sample.mp4"
+.\.venv\Scripts\python.exe py/recognition.py --video "C:\videos\sample.mp4"
 # 화면 없이 100프레임 처리
-.\.venv\Scripts\python.exe recognition.py --video "C:\videos\sample.mp4" --headless --max-frames 100
+.\.venv\Scripts\python.exe py/recognition.py --video "C:\videos\sample.mp4" --headless --max-frames 100
 # 거울 모드 해제
-.\.venv\Scripts\python.exe recognition.py --no-mirror
+.\.venv\Scripts\python.exe py/recognition.py --no-mirror
 # 관절 번호 숨기기
-.\.venv\Scripts\python.exe recognition.py --hide-hand-ids
+.\.venv\Scripts\python.exe py/recognition.py --hide-hand-ids
 # 얼굴 식별 기준 높이기
-.\.venv\Scripts\python.exe recognition.py --face-threshold 0.50
+.\.venv\Scripts\python.exe py/recognition.py --face-threshold 0.50
 # 카메라 없이 모델 실행 점검
-.\.venv\Scripts\python.exe recognition.py --self-test
+.\.venv\Scripts\python.exe py/recognition.py --self-test
 ```
 
 등록 모드는 웹캠과 화면이 필요한 기능으로 영상 파일이나 headless 옵션과 함께 사용할 수 없다. 등록 정보를 모두 초기화하려면 프로그램 종료 후 data/faces.json을 삭제한다.
@@ -165,8 +165,8 @@ cd C:\angchicken
 
 ```powershell
 python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe recognition.py --self-test
+.\.venv\Scripts\python.exe -m pip install -r txt/requirements.txt
+.\.venv\Scripts\python.exe py/recognition.py --self-test
 ```
 
 ## 6. 주요 변경 이력
