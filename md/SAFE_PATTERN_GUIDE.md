@@ -4,7 +4,7 @@
 
 ```powershell
 cd C:\angchicken
-.\.venv\Scripts\python.exe recognition.py
+.\.venv\Scripts\python.exe py/recognition.py
 ```
 
 실행하면 다음 통합 메뉴가 나옵니다.
@@ -32,9 +32,9 @@ cd C:\angchicken
 
 ```powershell
 # 2번에 신규 동작 패턴 등록
-.\.venv\Scripts\python.exe recognition.py --safe-mode enroll --safe-number 2
+.\.venv\Scripts\python.exe py/recognition.py --safe-mode enroll --safe-number 2
 # 2번 사용자 인증
-.\.venv\Scripts\python.exe recognition.py --safe-mode verify --safe-number 2
+.\.venv\Scripts\python.exe py/recognition.py --safe-mode verify --safe-number 2
 ```
 
 화면에 선택한 번호, 전체 금고 상태, 식별된 사용자의 배정 번호를 표시합니다. 일반 상태 목록에는 다른 소유자 이름을 표시하지 않습니다.
@@ -61,7 +61,7 @@ cd C:\angchicken
 
 ```powershell
 cd C:\angchicken
-.\.venv\Scripts\python.exe recognition.py --register "홍길동"
+.\.venv\Scripts\python.exe py/recognition.py --register "홍길동"
 ```
 
 이름을 바꾸어 실행하고 웹캠에서 얼굴을 보여준 뒤 S를 눌러 저장합니다. 각도를 조금씩 바꿔 3~5회 저장하고 종료합니다. 이미 얼굴을 등록했다면 이 과정은 생략할 수 있습니다.
@@ -69,7 +69,7 @@ cd C:\angchicken
 ## 1. 동작 패턴 등록
 
 ```powershell
-.\.venv\Scripts\python.exe recognition.py --safe-mode enroll
+.\.venv\Scripts\python.exe py/recognition.py --safe-mode enroll
 ```
 
 1. **터미널에 등록할 단계 수를 입력합니다.** 1~8단계 중 선택합니다.
@@ -88,7 +88,7 @@ cd C:\angchicken
 ## 2. 잠금 해제 인증
 
 ```powershell
-.\.venv\Scripts\python.exe recognition.py --safe-mode verify
+.\.venv\Scripts\python.exe py/recognition.py --safe-mode verify
 ```
 
 1. 등록된 얼굴을 보여주면 사용자를 식별합니다.
@@ -103,7 +103,7 @@ cd C:\angchicken
 옵션 없이 실행하면 등록과 잠금 해제를 오가는 통합 메뉴를 엽니다.
 
 ```powershell
-.\.venv\Scripts\python.exe recognition.py
+.\.venv\Scripts\python.exe py/recognition.py
 ```
 
 통합 메뉴에서 `1`은 금고 등록, `2`는 잠금 해제, `0`은 종료입니다. 어느 작업이든 금고 번호를 입력합니다. 등록에서는 이름과 단계 수를 추가로 물어본 뒤 카메라를 엽니다.
@@ -139,7 +139,7 @@ cd C:\angchicken
 허용 오차는 기본 0.23이며 낮을수록 엄격합니다. 확률이나 정확도 백분율은 아닙니다.
 
 ```powershell
-.\.venv\Scripts\python.exe recognition.py --safe-mode verify --pattern-tolerance 0.20
+.\.venv\Scripts\python.exe py/recognition.py --safe-mode verify --pattern-tolerance 0.20
 ```
 
 ## 저장 파일과 기존 패턴
@@ -161,8 +161,8 @@ cd C:\angchicken
 ## 검증 명령
 
 ```powershell
-.\.venv\Scripts\python.exe -m unittest test_safe_menu test_safe_pattern test_safe_slot -v
-.\.venv\Scripts\python.exe recognition.py --self-test
+.\.venv\Scripts\python.exe -m unittest discover -s py -p "test_*.py" -v
+.\.venv\Scripts\python.exe py/recognition.py --self-test
 ```
 
 테스트는 얼굴 확인의 안정화·소실·사용자 변경, 단계별 P 대기, 순서 비교, 취소, 저장·재로딩, 소유자 불일치, 표정 데이터 거부 등을 확인합니다. 실제 사용자의 얼굴·손 인식 성능은 웹캠으로 추가 확인해야 합니다.

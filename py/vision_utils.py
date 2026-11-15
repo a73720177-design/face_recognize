@@ -9,7 +9,7 @@ import numpy as np
 from mediapipe.tasks.python import vision
 from PIL import Image, ImageDraw, ImageFont
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 
 
 @lru_cache(maxsize=8)
