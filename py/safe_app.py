@@ -69,6 +69,14 @@ def run_safe(args):
     current_user = None
     paths = download_models()
     with ExitStack() as stack:
+        ros_output = None
+        if getattr(args,'ros2',False):
+            try:
+                from ros2_auth import Ros2AuthOutput
+                ros_output = Ros2AuthOutput()
+            except ImportError as error:
+                raise RuntimeError('ROS 2 Python environment is missing; source ROS setup first') from error
+            stack.callback(ros_output.close)
         pose,hand = create_detectors(stack,paths)
         cap = cv2.VideoCapture(str(args.video) if args.video else args.camera)
         stack.callback(cap.release)
@@ -134,6 +142,9 @@ def run_safe(args):
                 safe.recent.clear()
             if not face_present:
                 reset_until = 0.
+            if ros_output:
+                ros_output.update(number, mode=='verify' and face_present
+                                  and safe is not None and safe.state=='unlocked')
             for points in hands.hand_landmarks:
                 draw(frame,points,HAND_EDGES,color=(0,220,255))
             if poses.pose_landmarks:
@@ -178,6 +189,8 @@ def run_safe(args):
             if hands.hand_landmarks: visible.append(f'손 {len(hands.hand_landmarks)}개')
             if 'arms' in descriptor: visible.append('팔 자세')
             lines.append('캡처 대상: '+(', '.join(visible) or '인식 대기'))
+            if ros_output:
+                lines.append('ROS 2 연결 활성 · C: 문 닫기 요청 (실제 문 상태와 인증 상태는 별개)')
             if getattr(args,'menu_session',False):
                 lines=[line.replace('Q / Esc: 종료','Q / Esc: 메뉴로 돌아가기') for line in lines]
                 lines.append('M: 메뉴로 돌아가 금고 번호·작업 다시 선택')
@@ -196,6 +209,8 @@ def run_safe(args):
                     if safe: safe.lock()
                     break
                 if not args.video:
+                    if ros_output and key in (ord('c'),ord('C')):
+                        ros_output.request_close()
                     if safe and face_present:
                         if key in (ord('p'),ord('P')) and mode=='enroll':
                             if safe.state!='registering': safe.start_registration(time.monotonic())
