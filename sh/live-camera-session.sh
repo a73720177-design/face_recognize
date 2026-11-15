@@ -1,20 +1,24 @@
 #!/usr/bin/env bash
 set -eo pipefail
 umask 077
-case "${1:-}" in
-    ""|retest) ;;
-    -h|--help)
-        printf '%s\n' '사용법: bash sh/live-camera-session.sh [retest]' \
-            '인자 없이 실행하면 등록 메뉴를 엽니다. retest는 등록된 2번 칸을 바로 인증합니다.'
-        exit 0 ;;
-    *)
-        printf '알 수 없는 인자: %s\n' "$1" >&2
-        exit 2 ;;
-esac
-if [[ $# -gt 1 ]]; then
-    printf '%s\n' '사용법: bash sh/live-camera-session.sh [retest]' >&2
+usage() {
+    printf '%s\n' '사용법: bash sh/live-camera-session.sh [retest] --camera 장치경로' \
+        'retest를 지정하면 등록된 2번 칸을 바로 인증합니다.'
+}
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    usage
+    exit 0
+fi
+retest=false
+if [[ "${1:-}" == "retest" ]]; then
+    retest=true
+    shift
+fi
+if [[ $# -ne 2 || "$1" != "--camera" || -z "$2" || "$2" == -* ]]; then
+    usage >&2
     exit 2
 fi
+camera="$2"
 base="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$base"
 source /opt/ros/jazzy/setup.bash
@@ -24,7 +28,7 @@ mkdir -p "$runs"
 output="$(mktemp -d "$runs/session-XXXXXXXX")"
 printf '검증 로그: %s\n' "$output"
 export ROS_DOMAIN_ID=94 ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST PYTHONUNBUFFERED=1
-if [[ "${1:-}" == "retest" ]]; then
+if [[ "$retest" == true ]]; then
     export ROS_DOMAIN_ID=95
     set -- --safe-mode verify --safe-number 2
 else
@@ -39,4 +43,4 @@ if [[ $# == 0 ]]; then
     printf '%s\n' '가짜 모터 시험: 등록 1 → 금고 번호 2 → 테스트 이름 → 동작 1단계' '얼굴 창에서 S, Q → 동작 창에서 자세를 유지하고 P → 등록 후 메뉴 2, 금고 번호 2'
 fi
 printf '%s\n' '같은 자세로 U → 문 열림 확인 → C로 닫기 → 문 닫힘 확인 → Q'
-timeout --foreground 300s bash sh/run_linux.sh --camera 0 "$@"
+timeout --foreground 300s bash sh/run_linux.sh --camera "$camera" "$@"

@@ -122,7 +122,7 @@ def self_test():
 
 def main():
     parser=argparse.ArgumentParser(description='얼굴 식별 + 동작 패턴 2단계 인증 금고')
-    parser.add_argument('--camera',default='0',help='camera index or Linux /dev/v4l/by-id device path')
+    parser.add_argument('--camera',help='camera index or Linux /dev/v4l device path; required with --ros2')
     parser.add_argument('--ros2',action='store_true',help='publish local ROS 2 motor requests (Linux)')
     parser.add_argument('--video',help='인증 처리 점검용 영상 파일')
     parser.add_argument('--headless',action='store_true',help='화면 없이 처리 점검')
@@ -135,10 +135,14 @@ def main():
     parser.add_argument('--pattern-tolerance',type=float,default=.23)
     parser.add_argument('--self-test',action='store_true')
     args=parser.parse_args()
-    if args.camera.isdecimal():
-        args.camera=int(args.camera)
     if args.ros2 and (args.video or args.headless or args.self_test or args.register):
         parser.error('--ros2 requires the interactive live-camera safe mode')
+    if args.ros2 and not args.camera:
+        parser.error('--ros2 requires --camera; specify the safe-mounted camera device path')
+    if args.camera is None:
+        args.camera=0
+    elif args.camera.isdecimal():
+        args.camera=int(args.camera)
     if not 0<args.face_threshold<=1 or not .05<=args.pattern_tolerance<=.5:
         parser.error('얼굴 기준은 0 초과 1 이하, 패턴 오차는 0.05~0.5여야 합니다')
     if args.max_frames<0:
