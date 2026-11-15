@@ -1,0 +1,12 @@
+safe_motor_control:
+  ros__parameters:
+    hardware: false
+    device: /dev/ttyUSB0
+    baud: 57600
+    disk_id: 1
+    door_id: 2
+    disk_slots: [-1, -1, -1]
+    door_closed: -1
+    door_open: -1
+    profile_velocity: 12
+    pwm_limit: 60

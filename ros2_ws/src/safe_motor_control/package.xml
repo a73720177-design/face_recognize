@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>safe_motor_control</name>
+  <version>0.1.0</version>
+  <description>Positions a two-axis DYNAMIXEL safe.</description>
+  <maintainer email="a73720177@gmail.com">a73720177-design</maintainer>
+  <license>See upstream repository</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>

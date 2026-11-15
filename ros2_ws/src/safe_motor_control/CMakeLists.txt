@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.8)
+project(safe_motor_control)
+find_package(ament_cmake REQUIRED)
+install(PROGRAMS scripts/motor_control DESTINATION lib/${PROJECT_NAME})
+install(DIRECTORY config DESTINATION share/${PROJECT_NAME})
+ament_package()

@@ -1,0 +1,333 @@
+#!/usr/bin/env python3
+"""Rotate the disk only with the door closed, then open the door."""
+import argparse
+import sys
+from math import isfinite
+from time import monotonic
+
+import rclpy
+from rclpy.executors import ExternalShutdownException
+from rclpy.node import Node
+from std_msgs.msg import Bool, String
+
+MODEL = 1240
+POSITION = 132
+GOAL = 116
+TORQUE = 64
+TOLERANCE = 8
+CLOSED_SETTLE_TIME = 0.3
+
+
+class DynamixelBus:
+    def __init__(self, device, baud, ids):
+        from dynamixel_sdk import COMM_SUCCESS, PacketHandler, PortHandler
+
+        self.success = COMM_SUCCESS
+        self.port = PortHandler(device)
+        self.packet = PacketHandler(2.0)
+        self.enabled = set()
+        self.ids = ids
+        try:
+            if not self.port.openPort() or not self.port.setBaudRate(baud):
+                raise OSError(f'Cannot open {device} at {baud} bps')
+            for axis in self.ids:
+                motor = self.ids[axis]
+                model, result, error = self.packet.ping(self.port, motor)
+                self.check(result, error, f'ping ID {motor}')
+                if model != MODEL:
+                    raise ValueError(f'ID {motor}: model {model}, expected {MODEL}')
+        except BaseException:
+            self.port.closePort()
+            raise
+
+    def check(self, result, error, operation):
+        if result != self.success:
+            raise OSError(f'{operation}: {self.packet.getTxRxResult(result)}')
+        if error:
+            raise OSError(f'{operation}: {self.packet.getRxPacketError(error)}')
+
+    def read(self, axis, address, size):
+        motor = self.ids[axis]
+        value, result, error = getattr(self.packet, f'read{size}ByteTxRx')(
+            self.port, motor, address)
+        self.check(result, error, f'read ID {motor} address {address}')
+        return value
+
+    def write(self, axis, address, size, value):
+        motor = self.ids[axis]
+        result, error = getattr(self.packet, f'write{size}ByteTxRx')(
+            self.port, motor, address, value)
+        self.check(result, error, f'write ID {motor} address {address}')
+
+    def position(self, axis):
+        if self.read(axis, 70, 1):
+            raise OSError(f'{axis}: DYNAMIXEL hardware error')
+        value = self.read(axis, POSITION, 4)
+        return value if value < 2**31 else value - 2**32
+
+    def configure(self, goals, velocity, pwm):
+        for axis, targets in goals.items():
+            if self.read(axis, TORQUE, 1):
+                raise ValueError(f'{axis}: switch torque off before starting')
+            if self.read(axis, 11, 1) != 3 or self.read(axis, 10, 1) & 12:
+                raise ValueError(f'{axis}: requires position mode and velocity-based profile; disable torque-on-by-goal')
+            minimum = self.read(axis, 52, 4)
+            maximum = self.read(axis, 48, 4)
+            current = self.position(axis)
+            if not all(minimum <= p <= maximum for p in [current, *targets]):
+                raise ValueError(f'{axis}: position is outside the motor limits')
+            if not 1 <= pwm <= self.read(axis, 36, 2):
+                raise ValueError(f'{axis}: PWM exceeds configured motor limit')
+        for axis in goals:
+            self.write(axis, 100, 2, pwm)
+            self.write(axis, 108, 4, 4)
+            self.write(axis, 112, 4, velocity)
+
+    def move(self, axis, target):
+        if axis not in self.enabled:
+            self.write(axis, GOAL, 4, self.position(axis))
+            self.enabled.add(axis)
+            self.write(axis, TORQUE, 1, 1)
+        self.write(axis, GOAL, 4, target)
+
+    def stop(self, axis):
+        if axis in self.enabled:
+            self.write(axis, TORQUE, 1, 0)
+            self.enabled.remove(axis)
+
+    def disable(self):
+        failures = []
+        for axis in tuple(self.enabled):
+            try:
+                self.stop(axis)
+            except OSError as error:
+                failures.append(str(error))
+        if failures:
+            raise OSError('; '.join(failures))
+
+    def close(self):
+        try:
+            self.disable()
+        finally:
+            self.port.closePort()
+
+
+class MotorControl(Node):
+    def __init__(self):
+        super().__init__('safe_motor_control')
+        parameters = {
+            'hardware': False, 'device': '/dev/ttyUSB0', 'baud': 57600,
+            'disk_id': 1, 'door_id': 2, 'disk_slots': [-1, -1, -1],
+            'door_closed': -1, 'door_open': -1, 'profile_velocity': 12,
+            'pwm_limit': 60, 'move_timeout': 12.0,
+        }
+        self.declare_parameters('', list(parameters.items()))
+        p = {key: self.get_parameter(key).value for key in parameters}
+        self.hardware = p['hardware']
+        self.slots = p['disk_slots'] if self.hardware else [1024, 2048, 3072]
+        self.closed = p['door_closed'] if self.hardware else 1024
+        self.opened = p['door_open'] if self.hardware else 1200
+        if len(self.slots) != 3:
+            raise ValueError('disk_slots must contain exactly three positions')
+        self.positions = {'disk': self.slots[0], 'door': self.closed}
+        self.sim_targets = self.positions.copy()
+        self.timeout = p['move_timeout']
+        if not isfinite(self.timeout) or self.timeout <= 0:
+            raise ValueError('move_timeout must be finite and positive')
+        self.bus = None
+        self.requests = {}
+        self.closed_since = None
+        self.phase = 'checking_door'
+        self.slot = None
+        self.deadline = 0.0
+        self.close_requested = False
+        self.close_button_down = False
+        self.armed = False
+        self.faulted = False
+        self.status = self.create_publisher(String, '/safe/motor_status', 10)
+        for i in (1, 2, 3):
+            self.create_subscription(Bool, f'/safe/slot_{i}/unlock_request',
+                                     lambda msg, slot=i: self.request(slot, msg), 1)
+        self.create_subscription(Bool, '/safe/close_request', self.on_close, 10)
+        self.create_timer(0.1, self.tick)
+        if self.hardware:
+            disk_id, door_id = p['disk_id'], p['door_id']
+            if disk_id == door_id or not all(0 <= i <= 252 for i in (disk_id, door_id)):
+                raise ValueError('Configure two distinct DYNAMIXEL IDs')
+            if (not all(0 <= x <= 4095 for x in [*self.slots, self.closed, self.opened])
+                    or any(abs(a-b) <= 2*TOLERANCE for i, a in enumerate(self.slots)
+                           for b in self.slots[i+1:])
+                    or abs(self.closed-self.opened) <= 2*TOLERANCE):
+                raise ValueError('Configure calibrated disk_slots, door_closed and door_open ticks')
+            if not (1 <= p['profile_velocity'] <= 30 and 1 <= p['pwm_limit'] <= 175):
+                raise ValueError('Use profile_velocity 1..30 and pwm_limit 1..175')
+            bus = DynamixelBus(p['device'], p['baud'], {'disk': disk_id, 'door': door_id})
+            try:
+                bus.configure({'disk': self.slots, 'door': [self.closed, self.opened]},
+                              p['profile_velocity'], p['pwm_limit'])
+            except BaseException:
+                bus.close()
+                raise
+            self.bus = bus
+        self.get_logger().info('Hardware control enabled' if self.hardware else 'Simulation mode')
+
+    def request(self, slot, msg):
+        self.requests[slot] = (msg.data, monotonic())
+
+    def on_close(self, msg):
+        pressed = msg.data and not self.close_button_down
+        self.close_button_down = msg.data
+        if pressed and self.phase in ('open', 'door_unconfirmed', 'close_failed'):
+            self.close_requested = True
+
+    def position(self, axis):
+        if self.bus:
+            return self.bus.position(axis)
+        pos = self.positions[axis]
+        delta = self.sim_targets[axis] - pos
+        self.positions[axis] += max(-250, min(250, delta))
+        return self.positions[axis]
+
+    def door_is_closed(self, now):
+        if abs(self.position('door') - self.closed) > TOLERANCE:
+            self.closed_since = None
+            return False
+        if self.closed_since is None:
+            self.closed_since = now
+        return now - self.closed_since >= CLOSED_SETTLE_TIME
+
+    def move(self, axis, dest, phase, now):
+        if axis == 'door':
+            self.closed_since = None
+        if self.bus:
+            self.bus.move(axis, dest)
+        else:
+            self.sim_targets[axis] = dest
+        self.phase = phase
+        self.deadline = now + self.timeout
+
+    def close_failed(self):
+        if self.bus:
+            self.bus.stop('door')
+        else:
+            self.sim_targets['door'] = self.positions['door']
+        self.closed_since = None
+        self.close_requested = False
+        self.armed = False
+        self.phase = 'close_failed'
+        self.get_logger().warning('Door did not reach its closed position. Clear the opening and press Close again.')
+
+    def fail(self, error):
+        self.faulted = True
+        self.phase = 'fault'
+        self.get_logger().error(str(error))
+        if self.bus:
+            try:
+                self.bus.disable()
+            except OSError as stop_error:
+                self.get_logger().error(f'Torque-off unconfirmed: {stop_error}')
+
+    def tick(self):
+        if not self.faulted:
+            try:
+                self.step(monotonic())
+            except (OSError, ValueError) as error:
+                self.fail(error)
+        mode = 'hardware' if self.hardware else 'sim'
+        self.status.publish(String(data=f'{mode}:{self.phase}:{self.slot or 0}'))
+
+    def step(self, now):
+        fresh = {slot: value for slot, (value, stamp) in self.requests.items() if now-stamp < 0.5}
+        active = [slot for slot, value in fresh.items() if value]
+        if self.phase in ('rotating', 'opening') and now >= self.deadline:
+            raise OSError(f'{self.phase} timed out')
+        if self.phase == 'checking_door':
+            if self.door_is_closed(now):
+                self.phase = 'idle'
+            elif self.closed_since is None:
+                self.phase = 'door_unconfirmed'
+        elif self.phase == 'idle':
+            if not self.door_is_closed(now):
+                self.armed = False
+                self.phase = 'door_unconfirmed'
+                return
+            if len(fresh) == 3 and not active:
+                self.armed = True
+            if self.armed and len(fresh) == 3 and len(active) == 1:
+                self.armed = False
+                self.slot = active[0]
+                self.move('disk', self.slots[self.slot-1], 'rotating', now)
+        elif self.phase in ('rotating', 'opening'):
+            if len(fresh) != 3 or active != [self.slot]:
+                raise OSError('Unlock authorisation expired during movement')
+            if self.phase == 'rotating':
+                if not self.door_is_closed(now):
+                    raise OSError('Door encoder moved outside the closed range during disk movement')
+                if abs(self.position('disk') - self.slots[self.slot-1]) <= TOLERANCE:
+                    self.move('door', self.opened, 'opening', now)
+            else:
+                if abs(self.position('disk') - self.slots[self.slot-1]) > TOLERANCE:
+                    raise OSError('Disk alignment lost during door opening')
+                if abs(self.position('door') - self.opened) <= TOLERANCE:
+                    self.phase = 'open'
+        elif self.phase in ('open', 'door_unconfirmed', 'close_failed') and self.close_requested:
+            self.close_requested = False
+            self.move('door', self.closed, 'closing', now)
+        elif self.phase == 'closing':
+            if now >= self.deadline:
+                self.close_failed()
+            elif self.door_is_closed(now):
+                self.slot, self.phase = None, 'idle'
+
+    def close(self):
+        if self.bus:
+            self.bus.close()
+
+
+def main():
+    if len(sys.argv) > 1 and sys.argv[1] == '--probe':
+        parser = argparse.ArgumentParser(description='Read both motors without enabling torque')
+        parser.add_argument('--probe', action='store_true')
+        parser.add_argument('--device', default='/dev/ttyUSB0')
+        parser.add_argument('--baud', type=int, default=57600)
+        parser.add_argument('--disk-id', type=int, default=1)
+        parser.add_argument('--door-id', type=int, default=2)
+        args = parser.parse_args()
+        if args.disk_id == args.door_id or not all(0 <= i <= 252 for i in
+                                                  (args.disk_id, args.door_id)):
+            parser.error('Specify two distinct unicast motor IDs (0..252)')
+        try:
+            bus = DynamixelBus(args.device, args.baud, {'disk': args.disk_id, 'door': args.door_id})
+            try:
+                for axis, motor in bus.ids.items():
+                    print(f'{axis}: ID={motor} position={bus.position(axis)} '
+                          f'torque={bus.read(axis, TORQUE, 1)}')
+            finally:
+                bus.close()
+        except (ImportError, ValueError, OSError) as error:
+            print(error, file=sys.stderr)
+            return 1
+        return 0
+    rclpy.init()
+    node = None
+    try:
+        node = MotorControl()
+        rclpy.spin(node)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
+    except (ImportError, ValueError, OSError) as error:
+        print(error, file=sys.stderr)
+        return 1
+    finally:
+        if node:
+            try:
+                node.close()
+            except OSError as error:
+                print(f'Torque-off unconfirmed: {error}', file=sys.stderr)
+            node.destroy_node()
+        rclpy.try_shutdown()
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
